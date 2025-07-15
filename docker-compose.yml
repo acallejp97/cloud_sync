@@ -1,0 +1,21 @@
+services:
+  cloud_sync:
+    image: ghcr.io/acallejp97/cloud_sync:latest
+    container_name: cloud_sync
+    environment:
+      - CLOUD_ONE=
+      - CLOUD_TWO=
+      - SYNC_PATH=
+      - SYNC_CRON=
+      - BACKUP_CRON=
+    volumes:
+      - ./data/bisync_state:/app/bisync_state
+      - ./data/logs:/var/log
+      - ./data/config/rclone.conf:/config/rclone/rclone.conf:ro
+      - /mnt/rclone_backups:/mnt/rclone_backups
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"

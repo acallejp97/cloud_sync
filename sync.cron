@@ -1,0 +1,2 @@
+${SYNC_CRON} root /app/sync_daily.sh >> /var/log/rclone_sync.log 2>&1
+${BACKUP_CRON} root /app/backup_weekly.sh >> /var/log/rclone_backup.log 2>&1
