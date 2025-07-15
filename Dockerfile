@@ -4,8 +4,6 @@ RUN apk add --no-cache cron
 
 WORKDIR /app
 
-COPY data/config/rclone.conf /config/rclone/rclone.conf
-
 COPY app/sync.sh .
 COPY app/backup.sh .
 RUN chmod +x sync.sh
