@@ -9,7 +9,7 @@ COPY app/backup.sh .
 RUN chmod +x sync.sh
 RUN chmod +x backup.sh
 
-COPY rclone-sync.cron /etc/crontabs/root
+COPY sync.cron /etc/crontabs/root
 RUN chmod 0600 /etc/crontabs/root
 
 RUN mkdir -p /app/bisync_state
