@@ -1,6 +1,6 @@
 FROM rclone/rclone:latest
 
-RUN apk add --no-cache cron
+RUN apk add --no-cache dcron
 
 WORKDIR /app
 
@@ -9,9 +9,8 @@ COPY app/backup.sh .
 RUN chmod +x sync.sh
 RUN chmod +x backup.sh
 
-COPY sync.cron /etc/cron.d/rclone-sync
-RUN chmod 0644 /etc/cron.d/rclone-sync
-RUN crontab /etc/cron.d/rclone-sync
+COPY rclone-sync.cron /etc/crontabs/root
+RUN chmod 0600 /etc/crontabs/root
 
 RUN mkdir -p /app/bisync_state
 
