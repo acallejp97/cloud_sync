@@ -22,7 +22,7 @@ format_cloud() {
     fi
 }
 
-logger "Iniciando proceso de copia de seguridad..."
+logger "Starting backup..."
 
 TIMESTAMP=$(date +"%Y-%m-%d_%H-%M-%S")
 FILENAME=$(basename "${SYNC_PATH}")
@@ -35,43 +35,43 @@ LOCAL_BACKUP_FILE="${LOCAL_HOST_BACKUP_DIR}/${FILENAME}_backup_${TIMESTAMP}"
 
 mkdir -p "$LOCAL_HOST_BACKUP_DIR" >> "$LOG_FILE" 2>&1
 
-logger "Copiando ${SOURCE_PATH} a ${CLOUD_ONE_BACKUP_PATH} en ${CLOUD_ONE} (incremental)..."
+logger "Copying from ${SOURCE_PATH} to ${CLOUD_ONE_BACKUP_PATH} in ${CLOUD_ONE} (incremental)..."
 rclone copy "$SOURCE_PATH" "$CLOUD_ONE_BACKUP_PATH" \
     --verbose \
     --retries 3 \
     --log-file "$LOG_FILE"
 
 if [ $? -eq 0 ]; then
-    logger "Copia de seguridad incremental de ${CLOUD_ONE} completada."
+    logger "Incremental backup in ${CLOUD_ONE} completed."
 else
-    logger "¡Error en la copia de seguridad incremental de ${CLOUD_ONE}!"
+    logger "Error during incremental backup at ${CLOUD_ONE}"
     cat "$LOG_FILE"
 fi
 
-logger "Copiando ${DEST_PATH} a ${CLOUD_TWO_BACKUP_PATH} en ${CLOUD_TWO} (incremental)..."
+logger "Copying from ${DEST_PATH} to ${CLOUD_TWO_BACKUP_PATH} in ${CLOUD_TWO} (incremental)..."
 rclone copy "$DEST_PATH" "$CLOUD_TWO_BACKUP_PATH" \
     --verbose \
     --retries 3 \
     --log-file "$LOG_FILE"
 
 if [ $? -eq 0 ]; then
-    logger "Copia de seguridad incremental de ${CLOUD_TWO} completada."
+    logger "Incremental backup in ${CLOUD_TWO} completed."
 else
-    logger "¡Error en la copia de seguridad incremental de ${CLOUD_TWO}!"
+    logger "Error during incremental backup at ${CLOUD_TWO}"
     cat "$LOG_FILE"
 fi
 
-logger "Copiando ${SOURCE_PATH} a ${LOCAL_BACKUP_FILE} en el host (con fecha)..."
+logger "Copying ${SOURCE_PATH} to ${LOCAL_BACKUP_FILE} at local machine..."
 rclone copy "$SOURCE_PATH" "$LOCAL_BACKUP_FILE" \
     --verbose \
     --retries 3 \
     --log-file "$LOG_FILE"
 
 if [ $? -eq 0 ]; then
-    logger "Copia de seguridad local en el host (con fecha) completada."
+    logger "Local backup completed."
 else
-    logger "¡Error en la copia de seguridad local en el host (con fecha)!"
+    logger "Error during local backup!"
     cat "$LOG_FILE"
 fi
 
-logger "Proceso de copia de seguridad finalizado."
+logger "Backup process finished."

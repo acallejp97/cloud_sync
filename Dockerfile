@@ -2,7 +2,7 @@ FROM rclone/rclone:latest
 
 RUN apk add --no-cache cron
 
-WORKDIR /app # Keep WORKDIR as /app, scripts will be copied directly here
+WORKDIR /app
 
 COPY data/config/rclone.conf /config/rclone/rclone.conf
 

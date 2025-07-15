@@ -18,7 +18,7 @@ logger() {
     echo "$message"
 }
 
-logger "Iniciando la sincronización bidireccional de ${SOURCE_PATH} y ${DEST_PATH}..."
+logger "Starting with bidirectional syncronization for ${SOURCE_PATH} and ${DEST_PATH}..."
 
 RCLONE_BISYNC_CMD="rclone bisync \"$SOURCE_PATH\" \"$DEST_PATH\" \
     --bisync-state \"$BISYNC_STATE_DIR\" \
@@ -32,27 +32,27 @@ RCLONE_BISYNC_CMD="rclone bisync \"$SOURCE_PATH\" \"$DEST_PATH\" \
     --remove-empty-dirs"
 
 if [ -f "$RESYNC_FLAG_FILE" ]; then
-    logger "El archivo de resync existe. Ejecutando bisync SIN --resync."
+    logger "resync file does exist. Executing bisync without --resync."
     eval "$RCLONE_BISYNC_CMD"
 else
-    logger "El archivo de resync NO existe. Ejecutando bisync CON --resync por primera vez."
+    logger "resync file does NOT exist. Executing bisync WITH --resync for the first time."
     eval "$RCLONE_BISYNC_CMD --resync"
 
     if [ $? -eq 0 ]; then
-        logger "Primera ejecución con --resync completada exitosamente. Creando archivo de bandera."
+        logger "First execution with --resync completed successfully. Creating flag file."
         touch "$RESYNC_FLAG_FILE"
     else
-        logger "¡Error en la primera ejecución con --resync! No se creará el archivo de bandera."
+        logger "Error during first execution with --resync! Flag file is notgoing to be created."
         cat "$LOG_FILE"
         exit 1
     fi
 fi
 
 if [ $? -eq 0 ]; then
-    logger "Sincronización bidireccional completada exitosamente."
+    logger "Bidirectional syncronization completed successfully."
     exit 0
 else
-    logger "¡Error durante la sincronización bidireccional!"
+    logger "Error during bidirectional syncronization"
     cat "$LOG_FILE"
     exit 1
 fi
