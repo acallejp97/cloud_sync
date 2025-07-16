@@ -1,50 +1,160 @@
-# Rclone Bidirectional Sync: Google Drive ↔ iCloud (Dockerized) ☁️↔️☁️
+# Cloud Sync: Bidirectional File Synchronization Across Multiple Clouds
 
-This project enables you to bidirectionally synchronize a specific file between **Google Drive** and **iCloud** using **Rclone** within a **Docker container** orchestrated with **Docker Compose**. The synchronization runs automatically at defined intervals using `cron` inside the container, and the initial `resync` process is automated via a persistent flag file.
+## Overview
 
----
-
-## 🚀 Features
-
-* **Bidirectional Synchronization:** Uses `rclone bisync` to keep your file updated on both cloud services.
-* **Docker Containerization:** Isolates the application and its dependencies, ensuring a consistent environment.
-* **Docker Compose Orchestration:** Simplifies deployment, volume management, and service startup.
-* **Automated Scheduling with Cron:** The `cron` daemon runs within the container to execute the synchronization periodically.
-* **Automatic `resync` Handling:** The script detects if it's the first run and applies `--resync` only when necessary, requiring no manual intervention.
-* **Persistent Data & Logs:** Sync states and logs are stored in local folders on your server for easy debugging and tracking.
+**Cloud Sync** is a Dockerized solution for bidirectional synchronization of a specific file (such as a KeePass database) across multiple cloud storage providers (e.g., Google Drive, iCloud, Nextcloud) using [rclone bisync](https://rclone.org/bisync/). The project leverages Docker, Docker Compose, and cron for scheduled, automated, and persistent synchronization and backup, with robust logging and state management.
 
 ---
 
-## 📦 Project Structure
-.
+## Features
+
+- **Bidirectional Synchronization:** Keeps a file in sync between a main cloud and multiple secondary clouds.
+- **Automated Scheduling:** Uses cron inside the container for periodic sync and backup.
+- **First-run Resync:** Automatically performs a full resync on first run to ensure consistency.
+- **Persistent State and Logs:** Sync state and logs are stored on host volumes for durability and troubleshooting.
+- **Extensible:** Easily add more clouds by setting environment variables.
+- **Backup Support:** Periodic backups to local storage and cloud backup folders.
+- **Dockerized:** Easy deployment and isolation from host system.
+
+---
+
+## Project Structure
+
+```
+cloud_sync/
+├── app/
+│   ├── backup.sh                # Backup script
+│   ├── sync.sh                  # Main sync script
+│   └── common/
+│       ├── constants.sh         # Environment constants
+│       └── functions.sh         # Shared functions
 ├── data/
-│   ├── bisync_state/  # Stores rclone bisync state and the .resync_done flag file
-│   └── logs/          # Stores synchronization logs (rclone_bisync.log)
-├── docker-compose.yml
-├── Dockerfile
-├── rclone.conf        # Rclone configuration with your cloud credentials
-├── rclone-sync.cron   # Cron configuration file for the scheduled task
-└── sync.sh            # Main synchronization script
+│   ├── bisync_state/            # rclone bisync state and .resync_done flag
+│   ├── logs/                    # Log files
+│   └── config/
+│       └── rclone.conf          # rclone configuration (mounted)
+├── docker-compose.yml           # Docker Compose configuration
+├── Dockerfile                   # Docker image definition
+├── sync.cron                    # Cron schedule for sync/backup
+├── README.md                    # Quick start and setup
+└── LICENSE                      # Apache 2.0 License
+```
 
 ---
 
-## 🛠️ Prerequisites
+## How It Works
 
-* **Docker** and **Docker Compose** installed on your server.
-* **Rclone** installed temporarily on your local machine (or any environment with a web browser) to generate the `rclone.conf` file.
+- **Main Cloud as Hub:** All secondary clouds sync with the main cloud (e.g., Google Drive). Changes in any secondary cloud are propagated to the main cloud, and then to the others.
+- **Bidirectional Sync:** Uses `rclone bisync` for two-way synchronization between the main cloud and each secondary cloud.
+- **Stateful Sync:** The first run uses `--resync` to establish a clean state; subsequent runs use incremental sync for efficiency.
+- **Automated Backups:** Periodic backups are made both locally and to cloud backup folders.
+- **Logging:** All operations are logged for audit and troubleshooting.
 
 ---
 
-## ⚙️ Setup
+## Setup
 
-### 1. Generate `rclone.conf`
+### 1. Prerequisites
 
-This is the most critical step for authenticating with your cloud services.
+- [Docker](https://docs.docker.com/get-docker/) and [Docker Compose](https://docs.docker.com/compose/install/) installed.
+- [rclone](https://rclone.org/install/) installed locally to generate your `rclone.conf`.
 
-1.  **Install Rclone** on your local machine if you haven't already. Follow the [official Rclone installation guide](https://rclone.org/install/).
-2.  Run `rclone config` in your terminal and follow the steps to add two new remotes:
-    * One for **Google Drive** (e.g., `gdrive`). It will guide you through the OAuth2 authentication process in your browser.
-    * One for **iCloud** (e.g., `icloud`). It will ask for your Apple ID and an **app-specific password** if you have two-factor authentication (2FA) enabled (highly recommended). You can generate this password from your [Apple ID account management page](https://appleid.apple.com/). 
-3.  Once both remotes are configured, Rclone will create an `rclone.conf` file. It's usually found at `~/.config/rclone/rclone.conf` on Linux/macOS systems.
-4.  **Copy this `rclone.conf` file** to the root directory of your project where `docker-compose.yml` and `Dockerfile` are located.
+### 2. Configure rclone
 
+1. Run `rclone config` locally and set up remotes for each cloud (e.g., `gdrive`, `icloud`, `nextcloud`).
+2. Copy the generated `rclone.conf` to `data/config/rclone.conf` in your project directory.
+
+### 3. Environment Variables
+
+Edit `docker-compose.yml` to set your clouds and file to sync:
+```yaml
+environment:
+  - MAIN_CLOUD=gdrive
+  - CLOUD1=icloud
+  - CLOUD2=nextcloud
+  - SYNC_PATH=Documents/file.kdbx
+  - SYNC_CRON=*/2 * * * *
+  - BACKUP_CRON=0 0 * */2 *
+```
+- `MAIN_CLOUD`: The central cloud (e.g., `gdrive`)
+- `CLOUD1`, `CLOUD2`, ...: Additional clouds to sync with the main cloud
+- `SYNC_PATH`: Path to the file to synchronize (relative to each cloud root)
+- `SYNC_CRON`: Cron schedule for sync (default: every 2 minutes)
+- `BACKUP_CRON`: Cron schedule for backup
+
+### 4. Volumes
+
+The following volumes are mounted for persistence:
+- `./data/bisync_state:/app/bisync_state` — rclone bisync state
+- `./data/logs:/var/log` — logs
+- `./data/config/rclone.conf:/config/rclone/rclone.conf:ro` — rclone config (read-only)
+- `/mnt/rclone_backups:/mnt/rclone_backups` — local backup storage
+
+---
+
+## Usage
+
+### Build and Run
+
+1. **Build the Docker image:**
+   ```bash
+   docker build -t cloud_sync:latest .
+   ```
+2. **Start the service:**
+   ```bash
+   docker-compose up -d
+   ```
+
+### Logs
+
+- Sync logs: `data/logs/rclone_sync.log`
+- Backup logs: `data/logs/rclone_backup.log`
+
+### Adding More Clouds
+
+Add more `CLOUDn` variables in `docker-compose.yml` (e.g., `CLOUD3=onedrive`).
+
+---
+
+## How Synchronization Works
+
+- On first run, the script performs a full `--resync` between the main cloud and each secondary cloud.
+- On subsequent runs, only changes are synchronized, using the bisync state.
+- If you modify the file in one cloud (e.g., Nextcloud), the change is synced to the main cloud (e.g., Google Drive) on the next scheduled run, and then to the other clouds on their next sync cycle.
+- **Note:** If two clouds are modified simultaneously, rclone bisync will attempt to resolve conflicts, but it's best to avoid concurrent edits.
+
+---
+
+## Customization
+
+- **Sync Interval:** Adjust `SYNC_CRON` in `docker-compose.yml` for more/less frequent syncs.
+- **Backup Interval:** Adjust `BACKUP_CRON` for backup frequency.
+- **File to Sync:** Change `SYNC_PATH` to point to your desired file (e.g., your KeePass database).
+
+---
+
+## Troubleshooting
+
+- **Check logs** in `data/logs/` for errors or sync issues.
+- **First-run issues:** If you need to force a full resync, delete the `.resync_done` file in `data/bisync_state/`.
+- **Permissions:** Ensure Docker has access to all mounted volumes and files.
+
+---
+
+## License
+
+This project is licensed under the [Apache License 2.0](LICENSE).
+
+---
+
+## Credits
+
+Developed by Asier Calejo, 2025.
+
+---
+
+## References
+
+- [rclone bisync documentation](https://rclone.org/bisync/)
+- [Docker documentation](https://docs.docker.com/)
+- [KeePass](https://keepass.info/)
