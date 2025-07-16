@@ -151,7 +151,7 @@ This project is licensed under the [Apache License 2.0](LICENSE).
 
 ## Credits
 
-Developed by Asier Calejo, 2025.
+Developed by Asier Callejo, 2025.
 
 ---
 
