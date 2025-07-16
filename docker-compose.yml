@@ -9,6 +9,7 @@ services:
       - SYNC_PATH=Documents/file.txt
       - SYNC_CRON=*/2 * * * *
       - BACKUP_CRON=0 0 * */2 *
+      - TZ=Europe/Madrid
     volumes:
       - ./data/bisync_state:/app/bisync_state
       - ./data/logs:/var/log

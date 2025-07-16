@@ -1,6 +1,8 @@
 FROM rclone/rclone:latest
 
-RUN apk add --no-cache dcron
+RUN apk add --no-cache dcron tzdata
+
+ENV TZ=Europe/Madrid
 
 WORKDIR /app
 
