@@ -10,7 +10,8 @@
 
 - **Bidirectional Synchronization:** Keeps a file in sync between a main cloud and multiple secondary clouds.
 - **Automated Scheduling:** Uses cron inside the container for periodic sync and backup.
-- **First-run Resync:** Automatically performs a full resync on first run to ensure consistency.
+- **First-run Resync per Cloud:** Each cloud pair performs a full resync on first run to ensure consistency, tracked by a unique flag file per pair.
+- **Per-Pair Bisync State:** Each MAIN-SLAVE pair uses its own bisync state `.json` file, preventing interference between clouds.
 - **Persistent State and Logs:** Sync state and logs are stored on host volumes for durability and troubleshooting.
 - **Extensible:** Easily add more clouds by setting environment variables.
 - **Backup Support:** Periodic backups to local storage and cloud backup folders.
@@ -27,9 +28,9 @@ cloud_sync/
 │   ├── sync.sh                  # Main sync script
 │   └── common/
 │       ├── constants.sh         # Environment constants
-│       └── functions.sh         # Shared functions
+│       └── functions.sh         # Shared functions (per-pair bisync logic)
 ├── data/
-│   ├── bisync_state/            # rclone bisync state and .resync_done flag
+│   ├── bisync_state/            # rclone bisync state and .resync_done_MAIN_SLAVE flags
 │   ├── logs/                    # Log files
 │   └── config/
 │       └── rclone.conf          # rclone configuration (mounted)
@@ -46,7 +47,7 @@ cloud_sync/
 
 - **Main Cloud as Hub:** All secondary clouds sync with the main cloud (e.g., Google Drive). Changes in any secondary cloud are propagated to the main cloud, and then to the others.
 - **Bidirectional Sync:** Uses `rclone bisync` for two-way synchronization between the main cloud and each secondary cloud.
-- **Stateful Sync:** The first run uses `--resync` to establish a clean state; subsequent runs use incremental sync for efficiency.
+- **Per-Pair Stateful Sync:** The first run for each MAIN-SLAVE pair uses `--resync` to establish a clean state, tracked by a `.resync_done_MAIN_SLAVE` flag. Subsequent runs use incremental sync for efficiency.
 - **Automated Backups:** Periodic backups are made both locally and to cloud backup folders.
 - **Logging:** All operations are logged for audit and troubleshooting.
 
@@ -85,7 +86,7 @@ environment:
 ### 4. Volumes
 
 The following volumes are mounted for persistence:
-- `./data/bisync_state:/app/bisync_state` — rclone bisync state
+- `./data/bisync_state:/app/bisync_state` — rclone bisync state and resync flags
 - `./data/logs:/var/log` — logs
 - `./data/config/rclone.conf:/config/rclone/rclone.conf:ro` — rclone config (read-only)
 - `/mnt/rclone_backups:/mnt/rclone_backups` — local backup storage
@@ -118,8 +119,9 @@ Add more `CLOUDn` variables in `docker-compose.yml` (e.g., `CLOUD3=onedrive`).
 
 ## How Synchronization Works
 
-- On first run, the script performs a full `--resync` between the main cloud and each secondary cloud.
-- On subsequent runs, only changes are synchronized, using the bisync state.
+- On first run for each MAIN-SLAVE pair, the script performs a full `--resync` and creates a `.resync_done_MAIN_SLAVE` flag.
+- Each pair uses its own bisync state file: `bisync_MAIN_SLAVE.json`.
+- On subsequent runs, only changes are synchronized, using the bisync state for that pair.
 - If you modify the file in one cloud (e.g., Nextcloud), the change is synced to the main cloud (e.g., Google Drive) on the next scheduled run, and then to the other clouds on their next sync cycle.
 - **Note:** If two clouds are modified simultaneously, rclone bisync will attempt to resolve conflicts, but it's best to avoid concurrent edits.
 
@@ -136,7 +138,7 @@ Add more `CLOUDn` variables in `docker-compose.yml` (e.g., `CLOUD3=onedrive`).
 ## Troubleshooting
 
 - **Check logs** in `data/logs/` for errors or sync issues.
-- **First-run issues:** If you need to force a full resync, delete the `.resync_done` file in `data/bisync_state/`.
+- **First-run issues:** If you need to force a full resync for a specific pair, delete the corresponding `.resync_done_MAIN_SLAVE` file in `data/bisync_state/`.
 - **Permissions:** Ensure Docker has access to all mounted volumes and files.
 
 ---
