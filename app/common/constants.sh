@@ -13,4 +13,3 @@ LOCAL_HOST_BACKUP_DIR="/mnt/rclone_backups"
 LOCAL_BACKUP_FILE="${LOCAL_HOST_BACKUP_DIR}/${FILENAME}_backup_${TIMESTAMP}"
 
 BISYNC_STATE_DIR="/app/bisync_state"
-RESYNC_FLAG_FILE="${BISYNC_STATE_DIR}/.resync_done"

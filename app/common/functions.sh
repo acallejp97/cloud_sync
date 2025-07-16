@@ -45,9 +45,14 @@ create_directory() {
 }
 
 execute_bisync() {
-    local slave_cloud_path="$1"
+    
+    local slave_cloud="$1"
+    local cloud_path=$(format_cloud "${slave_cloud}:${SYNC_PATH}")
+    local bisync_state_file="${BISYNC_STATE_DIR}/bisync_${MAIN_CLOUD}_${slave_cloud}.json"
+    local resync_flag_file="${BISYNC_STATE_DIR}/.resync_done_${MAIN_CLOUD}_${slave_cloud}"
+
     RCLONE_COMMAND="rclone bisync \"$MAIN_PATH\" \"$slave_cloud_path\" \
-        --bisync-state \"$BISYNC_STATE_DIR\" \
+        --bisync-state \"$bisync_state_file\" \
         --track-renames \
         --checkers 10 \
         --transfers 10 \
@@ -57,20 +62,20 @@ execute_bisync() {
         --create-empty-src-dirs \
         --remove-empty-dirs"
 
-    logger "Starting with bidirectional syncronization for ${MAIN_PATH} and ${slave_cloud_path}..." "$SYNC_LOG_FILE"
+    logger "Starting bidirectional synchronization for ${MAIN_PATH} and ${slave_cloud_path}..." "$SYNC_LOG_FILE"
 
-    if [ -f "$RESYNC_FLAG_FILE" ]; then
-        logger "resync file does exist. Executing bisync without --resync." "$SYNC_LOG_FILE"
+    if [ -f "$resync_flag_file" ]; then
+        logger "Resync flag exists for $slave_cloud. Executing bisync without --resync." "$SYNC_LOG_FILE"
         eval "$RCLONE_COMMAND"
     else
-        logger "resync file does NOT exist. Executing bisync WITH --resync for the first time." "$SYNC_LOG_FILE"
+        logger "Resync flag does NOT exist for $slave_cloud. Executing bisync WITH --resync for the first time." "$SYNC_LOG_FILE"
         eval "$RCLONE_COMMAND --resync"
 
         if [ $? -eq 0 ]; then
-            logger "First execution with --resync completed successfully. Creating flag file." "$SYNC_LOG_FILE"
-            touch "$RESYNC_FLAG_FILE"
+            logger "First execution with --resync for $slave_cloud completed successfully. Creating flag file." "$SYNC_LOG_FILE"
+            touch "$resync_flag_file"
         else
-            logger "Error during first execution with --resync! Flag file is notgoing to be created." "$SYNC_LOG_FILE"
+            logger "Error during first execution with --resync for $slave_cloud! Flag file is not going to be created." "$SYNC_LOG_FILE"
             cat "$SYNC_LOG_FILE"
             exit 1
         fi
