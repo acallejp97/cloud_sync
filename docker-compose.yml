@@ -3,11 +3,12 @@ services:
     image: ghcr.io/acallejp97/cloud_sync:latest
     container_name: cloud_sync
     environment:
-      - CLOUD_ONE=
-      - CLOUD_TWO=
-      - SYNC_PATH=
-      - SYNC_CRON=
-      - BACKUP_CRON=
+      - MAIN_CLOUD=gdrive
+      - CLOUD1=icloud
+      - CLOUD2=nextcloud
+      - SYNC_PATH=Documents/file.txt
+      - SYNC_CRON=*/2 * * * *
+      - BACKUP_CRON=0 0 * */2 *
     volumes:
       - ./data/bisync_state:/app/bisync_state
       - ./data/logs:/var/log
